@@ -1,5 +1,6 @@
 import Text.ParserCombinators.Parsec
 import System.Environment
+import Data.List
 
 data Transition = Transition {
     source :: String,
@@ -29,22 +30,10 @@ cell = many (noneOf ",\n")
 eol :: GenParser Char st Char
 eol = char '\n'
 
-parseCSV :: String -> Either ParseError [[String]]
-parseCSV input = parse file "(unknown)" input
-
-getCSVString :: Either ParseError [[String]] -> [[String]]
-getCSVString input = case input of
-    Left err -> error "Failed to parse input!"
-    Right xs -> return xs    
-
-
--- parseCSV :: String -> [[String]]
--- parseCSV input = do
---     let parsed = parse file "(unknown)" input  
---     case (parsed) of
---         Left err -> error "Failed to parse input!"
---         Right xs -> return xs
-
+parseCSV :: String -> [[String]]
+parseCSV input = case (parse file "(unknown)" input) of
+    Left err -> error $ show err
+    Right xs -> return xs!!0
 
 --------------------------------------- MACHINE INIT ---------------------------------------
 initTransitions :: [[String]] -> [Transition]
@@ -64,12 +53,15 @@ initMachine xs = Machine {
 --------------------------------------- LOGIC? ---------------------------------------
 eliminateUnreachableStates :: Machine -> Machine
 eliminateUnreachableStates Machine {states = s, alphabet = a, initstate = i, finalstates = f, transitions = t} =
-    Machine (elim [i] [] t) a i f t -- todo final states
-    where
-        elim cur prev transitions = cur
-            -- | cur == prev = cur
-            -- | otherwise = [] ++ elim (addStates cur transitions) cur transitions
-            -- where addStates (x:xs) (y:ys) = 
+    Machine [(elim [[i]] [] t)] a i f t -- todo final states
+    where 
+        elim cur prev transitions 
+            | cur == prev = cur
+            | otherwise = elim (nub $ addStates cur transitions) cur transitions
+            where 
+                addStates state (transition:xs) 
+                    | state == source transition = [(source transition)]:addStates state xs
+                    | otherwise = [] ++ addStates state xs
 
 main :: IO()
 main = do
@@ -78,18 +70,24 @@ main = do
 
         [ "-i", path ] -> do
             csv <- readFile path
-            let parsed = parseCSV csv
-            print parsed
-            let fsm = initMachine parsed 
-            print $ fsm 
-            print $ eliminateUnreachableStates fsm
-        
+            print $ initMachine $ parseCSV csv
+
+            -- let fsm = initMachine $ parseCSV csv
+            -- print $ fsm 
+            -- print $ eliminateUnreachableStates fsm
+
         [ "-i" ] -> do
             csv <- getContents
-            print "meow"
-            -- case (parseCSV csv) of
-            --     Left err -> print err
-            --     Right xs -> print $ initMachine xs
+            print $ initMachine $ parseCSV csv
+
+        [ "-t", path ] -> do
+            csv <- readFile path
+            print $ eliminateUnreachableStates $ initMachine $ parseCSV csv
+
+        [ "-t" ] -> do
+            csv <- getContents
+            print $ initMachine $ parseCSV csv
+        
 
         _ -> print "Usage: dka-2-mka -i|-t [file_path]"
     
