@@ -32,6 +32,20 @@ eol = char '\n'
 parseCSV :: String -> Either ParseError [[String]]
 parseCSV input = parse file "(unknown)" input
 
+getCSVString :: Either ParseError [[String]] -> [[String]]
+getCSVString input = case input of
+    Left err -> error "Failed to parse input!"
+    Right xs -> return xs    
+
+
+-- parseCSV :: String -> [[String]]
+-- parseCSV input = do
+--     let parsed = parse file "(unknown)" input  
+--     case (parsed) of
+--         Left err -> error "Failed to parse input!"
+--         Right xs -> return xs
+
+
 --------------------------------------- MACHINE INIT ---------------------------------------
 initTransitions :: [[String]] -> [Transition]
 initTransitions [] = []
@@ -49,34 +63,33 @@ initMachine xs = Machine {
 
 --------------------------------------- LOGIC? ---------------------------------------
 eliminateUnreachableStates :: Machine -> Machine
-eliminateUnreachableStates machine {states = s, alphabet = a, initstate = i, finalstates = f, transitions = t} =
-    machine {states = (elim [initstate] [] t), alphabet = a, initstate = i, finalstates = f, transitions = t} -- todo final states
+eliminateUnreachableStates Machine {states = s, alphabet = a, initstate = i, finalstates = f, transitions = t} =
+    Machine (elim [i] [] t) a i f t -- todo final states
     where
-        elim cur prev transitions 
-            | cur == prev = cur
-            | otherwise = [] ++ elim (addStates cur transitions) cur transitions
-            where addStates (x:xs) (y:ys) = 
-
-
-
-
+        elim cur prev transitions = cur
+            -- | cur == prev = cur
+            -- | otherwise = [] ++ elim (addStates cur transitions) cur transitions
+            -- where addStates (x:xs) (y:ys) = 
 
 main :: IO()
 main = do
     args <- getArgs
     case args of
 
-        [ "-i", file ] -> do
-            csv <- readFile file
-            case (parseCSV csv) of
-                Left err -> print err
-                Right xs -> print $ initMachine xs
+        [ "-i", path ] -> do
+            csv <- readFile path
+            let parsed = parseCSV csv
+            print parsed
+            let fsm = initMachine parsed 
+            print $ fsm 
+            print $ eliminateUnreachableStates fsm
         
         [ "-i" ] -> do
             csv <- getContents
-            case (parseCSV csv) of
-                Left err -> print err
-                Right xs -> print $ initMachine xs
+            print "meow"
+            -- case (parseCSV csv) of
+            --     Left err -> print err
+            --     Right xs -> print $ initMachine xs
 
-        _ -> print "Usage: dka-2-mka -i|-t [file]"
+        _ -> print "Usage: dka-2-mka -i|-t [file_path]"
     
