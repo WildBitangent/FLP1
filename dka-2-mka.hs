@@ -1,4 +1,5 @@
 import Text.ParserCombinators.Parsec
+import System.Environment
 
 data Transition = Transition {
     source :: String,
@@ -16,8 +17,8 @@ data Machine = Machine {
 
 ------------------------------------------ PARSER ------------------------------------------
 
-csvFile :: GenParser Char st [[String]]
-csvFile = endBy line eol
+file :: GenParser Char st [[String]]
+file = endBy line eol
 
 line :: GenParser Char st [String]
 line = sepBy cell (char ',')
@@ -29,7 +30,7 @@ eol :: GenParser Char st Char
 eol = char '\n'
 
 parseCSV :: String -> Either ParseError [[String]]
-parseCSV input = parse csvFile "(unknown)" input
+parseCSV input = parse file "(unknown)" input
 
 --------------------------------------- MACHINE INIT ---------------------------------------
 initTransitions :: [[String]] -> [Transition]
@@ -46,8 +47,36 @@ initMachine xs = Machine {
     transitions = initTransitions $ drop 4 xs
 }
 
+--------------------------------------- LOGIC? ---------------------------------------
+eliminateUnreachableStates :: Machine -> Machine
+eliminateUnreachableStates machine {states = s, alphabet = a, initstate = i, finalstates = f, transitions = t} =
+    machine {states = (elim [initstate] [] t), alphabet = a, initstate = i, finalstates = f, transitions = t} -- todo final states
+    where
+        elim cur prev transitions 
+            | cur == prev = cur
+            | otherwise = [] ++ elim (addStates cur transitions) cur transitions
+            where addStates (x:xs) (y:ys) = 
+
+
+
+
+
 main :: IO()
-main = case (parseCSV "1,2,3\nabc\n1\n3\n1,a,3\n1,b,2\n2,a,2\n2,c,3\n") of
-    Left err -> print err
-    Right xs -> print $ initMachine xs
+main = do
+    args <- getArgs
+    case args of
+
+        [ "-i", file ] -> do
+            csv <- readFile file
+            case (parseCSV csv) of
+                Left err -> print err
+                Right xs -> print $ initMachine xs
+        
+        [ "-i" ] -> do
+            csv <- getContents
+            case (parseCSV csv) of
+                Left err -> print err
+                Right xs -> print $ initMachine xs
+
+        _ -> print "Usage: dka-2-mka -i|-t [file]"
     
